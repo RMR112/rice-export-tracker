@@ -3,6 +3,8 @@ import streamlit as st
 from src.db import init_db, insert_order, get_all_orders
 from src.models import Order
 import pandas as pd
+from src.utils import custom_date_input
+from datetime import date
 
 # Initialize DB
 init_db()
@@ -24,15 +26,28 @@ if menu_option == "Add Order":
         variety = st.text_input("Rice Variety")
         quantity_mt = st.number_input("Quantity (in MT)", min_value=0.0)
         price_per_mt = st.number_input("Price per MT", min_value=0.0)
+        # order_date = custom_date_input("Order Date", default_date=date.today(), key="order_date_input")
         order_date = st.date_input("Order Date")
+        # expected_ship_date = custom_date_input("Expected Shipping Date", default_date=date.today(), key="ship_date_input")
         expected_ship_date = st.date_input("Expected Shipping Date")
         notes = st.text_area("Notes (optional)")
         submitted = st.form_submit_button("Save Order")
 
         if submitted:
-            order = Order(buyer, country, variety, quantity_mt, price_per_mt, str(order_date), str(expected_ship_date), notes)
-            insert_order(order)
-            st.success(f"Order saved for {buyer} ({country})")
+            if expected_ship_date < order_date:
+                st.error("🚫 Expected Shipping Date cannot be before the Order Date.")
+            else:
+                formatted_order_date = order_date.strftime("%d/%m/%Y")
+                formatted_ship_date = expected_ship_date.strftime("%d/%m/%Y")
+
+                # Show captions after submission
+                st.caption(f"📅 Selected Order Date: **{formatted_order_date}**")
+                st.caption(f"🚢 Expected Ship Date: **{formatted_ship_date}**")
+                # Save order
+                order = Order(buyer, country, variety, quantity_mt, price_per_mt,
+                              formatted_order_date, formatted_ship_date, notes)
+                insert_order(order)
+                st.success(f"Order saved for {buyer} ({country})")
 
 elif menu_option == "View Orders":
     st.subheader("📋 All Orders")
