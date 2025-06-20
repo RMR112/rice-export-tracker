@@ -14,8 +14,12 @@ st.set_page_config(page_title="Rice Export Tracker", layout="wide")
 st.title("📦 Rice Export Order Tracker")
 
 # Sidebar Navigation
-st.sidebar.title("Menu")
-menu_option = st.sidebar.radio("Navigate", ["Add Order", "View Orders", "Track Shipments"])
+#st.sidebar.title("Menu")
+
+st.sidebar.title("📊 Export Tracker")
+menu_option = st.sidebar.radio("Navigate", ["Add Order", "View Orders", "Track Shipments", "Assign Orders to Shipment"])
+# Orders Section
+
 # Add Order Section
 if menu_option == "Add Order":
     st.subheader("➕ Add New Export Order")
@@ -62,7 +66,7 @@ elif menu_option == "View Orders":
     else:
         st.info("No orders found.")
 # Track Shipments Section
-elif menu_option == "Track Shipments":
+elif menu_option  == "Track Shipments":
     st.subheader("🚢 Manage Shipments")
 
     # Form to add new shipment
@@ -108,19 +112,18 @@ elif menu_option == "Track Shipments":
         st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
     else:
         st.info("No shipments available yet.")
+# Assign Orders to Shipment
 
-    st.divider()
+elif menu_option == "Assign Orders to Shipment":
     st.subheader("📦 Assign Orders to Shipment")
-
     # 1. Select a shipment
-    shipment_options = shipments
+    shipment_options = get_shipments()
     shipment_dict = {f"{cid} (ID: {sid})": sid for sid, cid, *_ in shipment_options}
     selected_shipment_label = st.selectbox("Select Shipment", list(shipment_dict.keys()))
 
     if selected_shipment_label:
         selected_shipment_id = shipment_dict[selected_shipment_label]
-
-        # 2. Show unassigned orders
+    # 2. Show unassigned orders
         unassigned_orders = get_unassigned_orders()
         if unassigned_orders:
             order_display = [f"{oid} - {buyer} ({variety}, {qty} MT)" for oid, buyer, variety, qty in unassigned_orders]
