@@ -67,7 +67,7 @@ def insert_order(order):
 def get_all_orders():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT * FROM orders ORDER BY order_date DESC")
+    c.execute("SELECT * FROM orders ORDER BY id DESC")
     rows = c.fetchall()
     conn.close()
     return rows
@@ -114,3 +114,15 @@ def assign_orders_to_shipment(shipment_id, order_ids):
         c.execute('INSERT INTO shipment_orders (shipment_id, order_id) VALUES (?, ?)', (shipment_id, order_id))
     conn.commit()
     conn.close()
+
+
+def get_orders_by_shipment(shipment_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, buyer, variety, quantity_mt
+        FROM orders
+        WHERE shipment_id = ?
+    """, (shipment_id,))
+    conn.close()
+    return c.fetchall()
