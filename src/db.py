@@ -28,7 +28,7 @@ def init_db():
                container_id TEXT,
                vessel_name TEXT,
                departure_date TEXT,
-               status TEXT,
+               status TEXT, 
                notes TEXT
            )
        ''')
@@ -120,9 +120,34 @@ def get_orders_by_shipment(shipment_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-        SELECT id, buyer, variety, quantity_mt
-        FROM orders
-        WHERE shipment_id = ?
+        SELECT o.id, o.buyer, o.variety, o.quantity_mt
+        FROM orders o
+        JOIN shipment_orders so ON o.id = so.order_id
+        WHERE so.shipment_id = ?
     """, (shipment_id,))
+    results = c.fetchall()
     conn.close()
-    return c.fetchall()
+    return results
+
+
+
+def get_shipment_by_id(shipment_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+def update_shipment(shipment_id, updated_shipment):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        UPDATE shipments
+        SET container_id = ?, vessel_name = ?, departure_date = ?, status = ?, notes = ?
+        WHERE id = ?
+    """, (updated_shipment.container_id, updated_shipment.vessel_name,
+          updated_shipment.departure_date, updated_shipment.status,
+          updated_shipment.notes, shipment_id))
+    conn.commit()
+    conn.close()

@@ -1,25 +1,42 @@
+from datetime import datetime
+
 import streamlit as st
 import pandas as pd
 from src.models import Shipment
+
 from src.db import (
     insert_shipment, get_shipments,
-    get_unassigned_orders, assign_orders_to_shipment,get_orders_by_shipment
+    get_unassigned_orders, assign_orders_to_shipment,get_orders_by_shipment,update_shipment, get_shipment_by_id
 )
 
 def manage_shipments_ui():
     st.subheader("📋 All Shipments")
+
     shipments = get_shipments()
+
     if shipments:
-        df = pd.DataFrame(shipments, columns=[
-            "ID", "Container ID", "Vessel Name", "Departure Date", "Status", "Notes"
-        ])
-        df["Status"] = df.apply(lambda row: format_status_badge(row["Status"]), axis=1)
-        st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+        # Build radio button options with display text per row
+        shipment_display = []
+        shipment_id_map = {}
+
+        for s in shipments:
+            sid, cid, vessel, dep_date, status, notes = s
+            display = f"🆔 {sid} | 📦 {cid} | 🚢 {vessel} | 📅 {dep_date} | 📍 {status} | 📝 {notes}"
+            shipment_display.append(display)
+            shipment_id_map[display] = sid
+
+        selected_display = st.radio("Select a shipment to edit", shipment_display)
+        selected_id = shipment_id_map[selected_display]
+
+        if st.button("✏️ Edit Selected Shipment"):
+            st.session_state.edit_shipment_id = selected_id
+
     else:
         st.info("No shipments available yet.")
 
+    # --- Divider and Add Shipment Form ---
     st.divider()
-    st.subheader("🚢 Manage Shipments")
+    st.subheader("➕ Add New Shipment")
 
     with st.form("shipment_form"):
         container_id = st.text_input("Container ID")
@@ -33,6 +50,48 @@ def manage_shipments_ui():
             shipment = Shipment(container_id, vessel_name, departure_date.strftime("%d/%m/%Y"), status, notes)
             insert_shipment(shipment)
             st.success(f"Shipment {container_id} added.")
+
+
+def edit_shipment_ui():
+    shipment_id = st.session_state.get("edit_shipment_id", None)
+    if shipment_id is None:
+        st.warning("No shipment selected to edit.")
+        return
+
+    shipment = get_shipment_by_id(shipment_id)
+    if not shipment:
+        st.error("Shipment not found.")
+        return
+
+    sid, container_id, vessel_name, departure_date_str, status, notes = shipment
+    departure_date = datetime.strptime(departure_date_str, "%d/%m/%Y").date()
+
+    st.subheader(f"✏️ Edit Shipment - {container_id}")
+
+    with st.form("edit_shipment_form"):
+        container_id_input = st.text_input("Container ID", value=container_id)
+        vessel_name_input = st.text_input("Vessel Name", value=vessel_name)
+        departure_date_input = st.date_input("Departure Date", value=departure_date)
+        status_input = st.selectbox("Current Status", ["Dispatched", "In Transit", "Customs Cleared", "Delivered"], index=["Dispatched", "In Transit", "Customs Cleared", "Delivered"].index(status))
+        notes_input = st.text_area("Notes", value=notes)
+        col1, col2 = st.columns(2)
+        with col1:
+            save = st.form_submit_button("💾 Save")
+        with col2:
+            cancel = st.form_submit_button("❌ Cancel")
+
+    if save:
+        updated = Shipment(container_id_input, vessel_name_input,
+                           departure_date_input.strftime("%d/%m/%Y"),
+                           status_input, notes_input)
+        update_shipment(shipment_id, updated)
+        st.success("Shipment updated successfully.")
+        del st.session_state.edit_shipment_id
+
+    if cancel:
+        del st.session_state.edit_shipment_id
+        st.info("Edit cancelled.")
+
 
 
 def assign_orders_ui():
