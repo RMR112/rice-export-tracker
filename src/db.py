@@ -139,6 +139,14 @@ def get_shipment_by_id(shipment_id):
     conn.close()
     return row
 
+def get_all_assigned_order_ids():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT order_id FROM shipment_orders")
+    rows = c.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
 def update_shipment(shipment_id, updated_shipment):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
